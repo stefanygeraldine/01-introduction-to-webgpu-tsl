@@ -1,5 +1,7 @@
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import * as THREE from 'three/webgpu'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import {vec3, sin, checker, uv, vec2, vec4, time, positionLocal, mx_noise_vec3, vertexStage } from 'three/tsl'
+
 
 /**
  * Base
@@ -70,10 +72,26 @@ renderer.setClearColor(0x111111)
 {
     const texture = textureLoader.load('./floor-color.jpg')
     texture.colorSpace = THREE.SRGBColorSpace
-    const mesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(10, 10),
-        new THREE.MeshStandardMaterial({ map: texture })
-    )
+
+    const geometry =  new THREE.PlaneGeometry(10, 10, 64, 64);
+
+    const material =  new THREE.MeshStandardNodeMaterial({
+        map: texture,
+        transparent: true,
+        wireframe: true
+    });
+
+    const fade = uv().sub(0.5).length().smoothstep(0.5,0.2)
+    material.opacityNode = fade
+
+    //const noise = vertexStage(mx_noise_vec3(uv().mul(4)));
+    const noise = mx_noise_vec3(uv().mul(4)).toVertexStage;
+    const noise = mx_noise_vec3(uv().mul(4)).toVarying('test-varying');
+    material.colorNode = noise
+
+
+    const mesh = new THREE.Mesh(geometry, material)
+
     mesh.rotation.x = - Math.PI * 0.5
     mesh.receiveShadow = true
     scene.add(mesh)
@@ -84,7 +102,20 @@ renderer.setClearColor(0x111111)
  */
 {
     const geometry = new THREE.TorusKnotGeometry(0.5, 0.24, 128, 32)
-    const material = new THREE.MeshStandardMaterial()
+    const material = new THREE.MeshStandardNodeMaterial({
+        color: 0xff0000,
+        metalness: 0.5,
+        roughness: 0.25
+
+    })
+
+    const pattern = checker(uv().add(time.mul(0.02)).mul(vec2(40, 5)))
+    material.colorNode = vec3(pattern,0, 0);
+    material.roughnessNode = pattern
+
+    const zOffset = sin(time.add(positionLocal.y.mul(3))).mul(0.4);
+    material.positionNode = positionLocal.add(vec3(2,0,zOffset))
+
     const mesh = new THREE.Mesh(geometry, material)
     mesh.castShadow = true
     mesh.receiveShadow = true
