@@ -78,16 +78,16 @@ renderer.setClearColor(0x111111)
     const material =  new THREE.MeshStandardNodeMaterial({
         map: texture,
         transparent: true,
-        wireframe: true
+       // wireframe: true
     });
 
     const fade = uv().sub(0.5).length().smoothstep(0.5,0.2)
-    material.opacityNode = fade
+   // material.opacityNode = fade
 
-    //const noise = vertexStage(mx_noise_vec3(uv().mul(4)));
-    const noise = mx_noise_vec3(uv().mul(4)).toVertexStage;
-    const noise = mx_noise_vec3(uv().mul(4)).toVarying('test-varying');
-    material.colorNode = noise
+    const noise = vertexStage(mx_noise_vec3(uv().mul(4)));
+   // const noise = mx_noise_vec3(uv().mul(4)).toVertexStage;
+    //const noise = mx_noise_vec3(uv().mul(4)).toVarying('test-varying');
+    //material.colorNode = noise
 
 
     const mesh = new THREE.Mesh(geometry, material)
@@ -102,19 +102,17 @@ renderer.setClearColor(0x111111)
  */
 {
     const geometry = new THREE.TorusKnotGeometry(0.5, 0.24, 128, 32)
-    const material = new THREE.MeshStandardNodeMaterial({
-        color: 0xff0000,
-        metalness: 0.5,
-        roughness: 0.25
+    const material = new THREE.MeshStandardNodeMaterial();
 
-    })
+    material.outputNode = vec4(positionLocal, 1)
 
-    const pattern = checker(uv().add(time.mul(0.02)).mul(vec2(40, 5)))
-    material.colorNode = vec3(pattern,0, 0);
-    material.roughnessNode = pattern
+    //const pattern = checker(uv().add(time.mul(0.02)).mul(vec2(40, 5)))
+    //const foo = vec2(0.5, 1)
+    //material.colorNode = vec3(foo, 0);
+    //material.roughnessNode = pattern
 
     const zOffset = sin(time.add(positionLocal.y.mul(3))).mul(0.4);
-    material.positionNode = positionLocal.add(vec3(2,0,zOffset))
+   // material.positionNode = positionLocal.add(vec3(2,0,zOffset))
 
     const mesh = new THREE.Mesh(geometry, material)
     mesh.castShadow = true
@@ -159,7 +157,7 @@ const tick = () =>
     renderer.render(scene, camera)
 
     // Call tick again on the next frame
-    window.requestAnimationFrame(tick)
+   // window.requestAnimationFrame(tick)
 }
 
 renderer.setAnimationLoop(tick)
