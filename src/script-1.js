@@ -19,7 +19,7 @@ import {
     mx_noise_vec3,
     vertexStage,
     normalLocal,
-    positionWorld, normalView, hash, mx_noise_float, rotateUV, triplanarTexture, Fn, If, bool, Discard, int, Loop
+    positionWorld, normalView, hash, mx_noise_float, rotateUV, triplanarTexture
 } from 'three/tsl'
 
 
@@ -108,71 +108,19 @@ uvChecker.repeat.set(3,3)
        // wireframe: true
     });
 
-    // 1. Declaramos 'circle' primero
-    const circle = Fn(({
-                           coordinates = uv(),
-                           center = vec2(0.5),
-                           radius = float(0.25),
-                           thickness = float(0.02),
-                           inverted = bool(false),
-                           discarded = bool(false),
-                       }) => {
-        const distanceToCenter = coordinates.distance(center)
-        const linesSDF = distanceToCenter.sub(radius)
-        const line = linesSDF.abs().step(thickness.div(2))
-
-        If(inverted.not(), () => {
-            line.assign(line.oneMinus())
-        })
-
-        line.lessThanEqual(0).and(discarded).discard()
-
-        return line
-    })
-
-// 2. Declaramos 'circles' después
-    const circles = Fn(({
-                            coordinates = uv(),
-                            center = vec2(0.5),
-                            radius = float(0.075),
-                            thickness = float(0.02),
-                            inverted = bool(false),
-                            discarded = bool(false),
-                            count = float(5),        // Cambiado a float para que coincida con el Loop
-                            span = float(0.08)       // Reducido de 0.5 a 0.08 para que quepan en las UVs
-                        }) => {
-        const lines = float(0).toVar() // Usa .toVar() para variables mutables en TSL
-
-        Loop({ start: float(0), end: count, type: 'float', condition: '<', name: 'i' }, ({ i }) => {
-            lines.addAssign(circle({
-                coordinates,
-                center,
-                radius: radius.add(i.mul(span)),
-                thickness,
-                inverted: bool(false),
-                discarded: bool(false)
-            }))
-        })
-
-        If(inverted, () => {
-            lines.assign(lines.oneMinus())
-        })
-
-        return lines
-    })
-
-// Uso en el material
-    material.colorNode = vec3(circles({
-        radius: float(0.05),
-        span: float(0.08),
-        count: float(6),
-        inverted: bool(true)
-    }))
-
-
+    material.colorNode = texture(
+        uvChecker,
+        rotateUV(uv().mul(3), -1, vec2(0))
+    )
 
     const fade = uv().sub(0.5).length().smoothstep(0.5,0.2)
     material.opacityNode = fade
+
+    const noise = vertexStage(mx_noise_vec3(uv().mul(4)));
+   // const noise = mx_noise_vec3(uv().mul(4)).toVertexStage;
+    //const noise = mx_noise_vec3(uv().mul(4)).toVarying('test-varying');
+    //material.colorNode = noise
+
 
     const mesh = new THREE.Mesh(geometry, material)
 
@@ -182,13 +130,41 @@ uvChecker.repeat.set(3,3)
 }
 
 /**
- * Torus
+ * Dummy
  */
 {
     const geometry = new THREE.TorusKnotGeometry(0.5, 0.24, 128, 32)
     //const geometry = new THREE.SphereGeometry(0.5,12,16)
     const material = new THREE.MeshStandardNodeMaterial();
 
+    // material.outputNode = vec4(positionLocal, 1)
+    // material.outputNode = vec4(normalView, 1)
+    // const pattern = hash(uv().x.mul(100))
+    const pattern = rand(uv().mul(100).floor())
+   // const noise = mx_noise_float(uv().mul(vec2(50,10)))
+    //material.colorNode = vec3(pattern)
+    material.colorNode = triplanarTexture(
+        texture(uvChecker),
+        null,
+        null,
+        float(2),
+        positionLocal,
+        normalLocal
+    )
+
+    const angle = time.add(positionLocal.y).sin()
+    const newXZ = rotate(positionLocal.xz, angle)
+
+    // material.positionNode = vec3( newXZ.x, positionLocal.y, newXZ.y )
+
+
+    //const pattern = checker(uv().add(time.mul(0.02)).mul(vec2(40, 5)))
+    //const foo = vec2(0.5, 1)
+    //material.colorNode = vec3(foo, 0);
+    //material.roughnessNode = pattern
+
+    const zOffset = sin(time.add(positionLocal.y.mul(3))).mul(0.4);
+   // material.positionNode = positionLocal.add(vec3(2,0,zOffset))
 
     const mesh = new THREE.Mesh(geometry, material)
     mesh.castShadow = true
@@ -197,6 +173,26 @@ uvChecker.repeat.set(3,3)
 
     scene.add(mesh)
 
+
+// TransformControl
+    const transformControls = new TransformControls(camera, canvas)
+    transformControls.attach(mesh)
+    scene.add(transformControls.getHelper())
+
+    transformControls.addEventListener('dragging-changed', (event) =>
+    {
+        controls.enabled = !event.value
+    })
+
+    window.addEventListener('keydown', (event) =>
+    {
+        if(event.key === 'g')
+            transformControls.setMode('translate')
+        else if(event.key === 'r')
+            transformControls.setMode('rotate')
+        else if(event.key === 's')
+            transformControls.setMode('scale')
+    })
 
 
 
